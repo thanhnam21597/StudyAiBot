@@ -1,0 +1,45 @@
+cd frontend
+npm install
+npm run dev
+
+
+cd backend
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver 8000
+
+
+=========================================
+HUONG DAN PUSH CODE LEN GITHUB / GIT
+=========================================
+# 1. Mo Terminal / Command Prompt tai thu muc goc du an:
+# d:\Tong Hop\StudyAiBot
+
+# 2. Khoi tao Git (chi lam lan dau tien):
+git init
+
+# 3. Kiem tra cac file chuan bi them (dam bao da bo qua venv, node_modules, .env):
+git status
+
+# 4. Them tat ca cac file vao commit:
+git add .
+
+# 5. Tao ban ghi commit:
+git commit -m "feat: complete StudyMate Bot with message recall and UI"
+
+# 6. Doi ten nhanh chinh thanh main:
+git branch -M main
+
+# 7. Lien ket voi kho chua tren GitHub (thay URL kho cua ban vao day):
+# Vi du: git remote add origin https://github.com/<tai_khoan>/<ten_repo>.git
+git remote add origin <URL_REPO_CUA_BAN>
+
+# 8. Day code len GitHub:
+git push -u origin main
+
+# Nhap lan sau (khi co thay doi code moi chi can chay 3 lenh):
+# git add .
+# git commit -m "noi dung thay doi"
+# git push

@@ -1,0 +1,48 @@
+{
+  "user_id": "student_01",
+  "latest_blob_id": "Vq5cpYDCugMo_UZSPOyfczFHpTH5re0BQ1mmhKaY5QE",
+  "memory_data": {
+    "current_goal": "Mastering Graph Algorithms (Dijkstra, Bellman-Ford)",
+    "weak_points": [
+      "Dijkstra Priority Queue implementation"
+    ],
+    "known_topics": [
+      "BFS",
+      "DFS",
+      "Binary Search Tree"
+    ],
+    "in_progress_tasks": [
+      "Implement Dijkstra with min-heap in Python"
+    ],
+    "status": "active_learner",
+    "user_id": "student_01",
+    "last_updated": "2026-09-19T07:03:39.017702"
+  },
+  "synced_at": "2026-09-19T07:03:51.293990",
+  "walrus_raw": {
+    "newlyCreated": {
+      "blobObject": {
+        "id": "0x715749176593946cb485cdc117c6b74b85d779102bd3246e5c8be39d998b191d",
+        "registeredEpoch": 525,
+        "blobId": "Vq5cpYDCugMo_UZSPOyfczFHpTH5re0BQ1mmhKaY5QE",
+        "size": 400,
+        "encodingType": "RS2",
+        "certifiedEpoch": null,
+        "storage": {
+          "id": "0x3482a70649613645e734bf47c5ac3b5895b3dfa820a2d7d880f1dd2d63cd6d00",
+          "startEpoch": 525,
+          "endEpoch": 530,
+          "storageSize": 66034000
+        },
+        "deletable": true
+      },
+      "resourceOperation": {
+        "registerFromScratch": {
+          "encodedLength": 66034000,
+          "epochsAhead": 5
+        }
+      },
+      "cost": 1498455
+    }
+  }
+}
