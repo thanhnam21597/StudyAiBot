@@ -95,9 +95,14 @@ export default function App() {
         return next;
       });
 
-      // Refresh memory if returned
-      if (response.memory_context) {
-        setMemory(response.memory_context);
+      // Refresh memory panel after new facts stored
+      if (response.recalled_facts || response.new_facts_stored) {
+        try {
+          const memData = await memoryApi.getMemoryStatus(userId);
+          setMemory(memData);
+        } catch (e) {
+          console.warn('Memory refresh after chat failed:', e);
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -115,25 +120,25 @@ export default function App() {
     }
   };
 
-  const handleRecallMessage = async (messageId) => {
+  const handleUnsendMessage = async (messageId) => {
     try {
-      await chatApi.recallMessage(messageId, userId);
+      await chatApi.unsendMessage(messageId, userId);
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === messageId
             ? {
                 ...msg,
                 is_recalled: true,
-                content: 'Tin nhắn đã được thu hồi',
+                content: 'Tin nhắn đã được rút lại',
                 recalled_at: new Date().toISOString(),
               }
             : msg
         )
       );
-      showToast('Tin nhắn đã được thu hồi thành công.', 'success');
+      showToast('Tin nhắn đã được rút lại thành công.', 'success');
     } catch (err) {
-      console.error('Error recalling message:', err);
-      showToast('Không thể thu hồi tin nhắn. Vui lòng thử lại.', 'error');
+      console.error('Error unsending message:', err);
+      showToast('Không thể rút lại tin nhắn. Vui lòng thử lại.', 'error');
     }
   };
 
@@ -238,7 +243,7 @@ export default function App() {
           <ChatWindow
             messages={messages}
             isLoading={isLoading}
-            onRecallMessage={handleRecallMessage}
+            onUnsendMessage={handleUnsendMessage}
             onDeleteMessage={handleDeleteMessage}
             onClearHistory={handleClearHistory}
           />

@@ -28,8 +28,8 @@ export const chatApi = {
     return response.data;
   },
 
-  // Thu hồi tin nhắn chat (đánh dấu đã thu hồi, loại bỏ khỏi ngữ cảnh LLM)
-  recallMessage: async (messageId, userId) => {
+  // Rút lại tin nhắn chat (Unsend — đánh dấu đã rút, loại bỏ khỏi ngữ cảnh LLM)
+  unsendMessage: async (messageId, userId) => {
     const response = await apiClient.post(`/chat/message/${messageId}/recall/`, {
       user_id: userId,
     });

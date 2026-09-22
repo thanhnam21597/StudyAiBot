@@ -1,0 +1,16 @@
+{
+  "user_id": "smoke_test_user",
+  "namespace": "studymate:smoke_test_user",
+  "cached_at": "2026-09-21T09:55:08.435829",
+  "debug_note": "This is a local debug cache only. Source of truth is MemWal.",
+  "memories": [
+    {
+      "text": "Student knows Python basics",
+      "distance": 0.5973
+    },
+    {
+      "text": "Student is studying graph algorithms",
+      "distance": 0.6012
+    }
+  ]
+}
