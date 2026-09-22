@@ -1,114 +1,170 @@
+import os
 import json
 import logging
-import requests
 from datetime import datetime
-from django.conf import settings
+from memwal import MemWalSync, RecallParams
 from .utils import get_local_cache_path
 
 logger = logging.getLogger(__name__)
 
+
 class WalrusMemoryService:
     """
-    Service giao tiếp trực tiếp với hệ thống lưu trữ phi tập trung Walrus Protocol (MemWal).
-    - Read Memory: Truy xuất Blob bộ nhớ từ Walrus Aggregator.
-    - Write Memory: Lưu trữ dữ liệu ký ức mới lên Walrus Publisher.
+    Service powered by the official MemWal Python SDK.
+    Each student gets an isolated namespace: f"studymate:{user_id}".
+    One memory = one atomic fact sentence (not one giant JSON blob).
     """
 
-    def __init__(self):
-        self.publisher_url = settings.WALRUS_PUBLISHER_URL.rstrip('/')
-        self.aggregator_url = settings.WALRUS_AGGREGATOR_URL.rstrip('/')
-        self.default_epochs = getattr(settings, 'WALRUS_DEFAULT_EPOCHS', 5)
+    def _get_client(self, user_id: str) -> MemWalSync:
+        """Create a MemWalSync client scoped to the student's namespace."""
+        key = os.getenv("MEMWAL_PRIVATE_KEY", "")
+        account_id = os.getenv("MEMWAL_ACCOUNT_ID", "")
+        env = os.getenv("MEMWAL_ENV", "prod")
+
+        if not key or not account_id:
+            raise RuntimeError(
+                "MEMWAL_PRIVATE_KEY and MEMWAL_ACCOUNT_ID must be set in .env. "
+                "Visit https://memory.walrus.xyz to generate delegate keys."
+            )
+
+        return MemWalSync.create(
+            key=key,
+            account_id=account_id,
+            env=env,
+            namespace=f"studymate:{user_id}",
+        )
+
+    def health_check(self, user_id: str = "default") -> bool:
+        """Ping MemWal to verify connectivity."""
+        try:
+            client = self._get_client(user_id)
+            client.health()
+            return True
+        except Exception as e:
+            logger.error(f"MemWal health check failed: {e}")
+            return False
+
+    def recall_memories(self, user_id: str, query: str) -> list:
+        """
+        Semantic search via MemWal recall().
+        Returns a list of fact-string dicts: [{"text": "...", "distance": 0.xx}, ...]
+        """
+        try:
+            client = self._get_client(user_id)
+            result = client.recall(RecallParams(query=query))
+            memories = []
+            for m in result.results:
+                memories.append({
+                    "text": m.text,
+                    "distance": round(m.distance, 4) if hasattr(m, 'distance') else None,
+                })
+            logger.info(f"MemWal recall for '{user_id}' query='{query[:60]}' → {len(memories)} results")
+
+            # Debug cache: save latest recall to local JSON
+            self._save_debug_cache(user_id, memories)
+
+            return memories
+        except Exception as e:
+            logger.error(f"MemWal recall failed for user '{user_id}': {e}")
+            # Surface the error — do NOT silently pretend memory worked
+            raise
+
+    def remember_facts(self, user_id: str, facts: list) -> dict:
+        """
+        Store atomic facts via MemWal remember_and_wait().
+        Each fact is a single plain English sentence.
+        Returns {"stored": [...], "errors": [...]}.
+        """
+        if not facts:
+            return {"stored": [], "errors": []}
+
+        try:
+            client = self._get_client(user_id)
+        except Exception as e:
+            return {"stored": [], "errors": [{"fact": "ALL", "error": str(e)}]}
+
+        stored = []
+        errors = []
+        for fact in facts:
+            fact = fact.strip()
+            if not fact:
+                continue
+            try:
+                client.remember_and_wait(fact)
+                stored.append(fact)
+                logger.info(f"MemWal remembered for '{user_id}': {fact[:80]}")
+            except Exception as e:
+                logger.error(f"MemWal remember failed for '{user_id}': {fact[:60]} → {e}")
+                errors.append({"fact": fact, "error": str(e)})
+
+        return {"stored": stored, "errors": errors}
 
     def get_user_memory(self, user_id: str) -> dict:
         """
-        Operating Rule 1: TRUY VẤN BỘ NHỚ
-        Truy xuất ngữ cảnh học tập dài hạn của học viên từ Walrus/MemWal.
+        High-level method: recall a broad summary of student memories.
+        Used by the memory status panel and chat context.
+        Returns a dict with recalled facts and metadata.
         """
-        # 1. Kiểm tra cache/mapping blob_id cục bộ của user
-        cache_path = get_local_cache_path(user_id)
-        if cache_path.exists():
-            try:
-                with open(cache_path, 'r', encoding='utf-8') as f:
-                    cached_info = json.load(f)
-                    blob_id = cached_info.get('latest_blob_id')
-                    if blob_id:
-                        # Thử lấy từ Aggregator của Walrus
-                        blob_data = self.fetch_blob(blob_id)
-                        if blob_data:
-                            return blob_data
-                    # Fallback dữ liệu nội dung trong cache
-                    return cached_info.get('memory_data', {})
-            except Exception as e:
-                logger.error(f"Error reading local memory cache for {user_id}: {e}")
-
-        # Default memory record for new student
-        return {
-            "user_id": user_id,
-            "status": "new_student",
-            "current_goal": "Get familiar with the study roadmap and Walrus Memory system",
-            "known_topics": [],
-            "weak_points": [],
-            "in_progress_tasks": [],
-            "last_updated": datetime.utcnow().isoformat()
-        }
+        try:
+            memories = self.recall_memories(user_id, "student learning progress goals topics weak points")
+            health = self.health_check(user_id)
+            return {
+                "user_id": user_id,
+                "namespace": f"studymate:{user_id}",
+                "health": health,
+                "memory_count": len(memories),
+                "memories": memories,
+                "status": "connected" if health else "error",
+            }
+        except Exception as e:
+            logger.error(f"get_user_memory failed for '{user_id}': {e}")
+            return {
+                "user_id": user_id,
+                "namespace": f"studymate:{user_id}",
+                "health": False,
+                "memory_count": 0,
+                "memories": [],
+                "status": "error",
+                "error": str(e),
+            }
 
     def save_user_memory(self, user_id: str, memory_payload: dict) -> dict:
         """
-        Operating Rule 2: CẬP NHẬT BỘ NHỚ
-        Đẩy dữ liệu ký ức mới lên mạng phi tập trung Walrus Protocol.
+        Legacy-compatible method: accepts a payload and stores it as facts.
+        If payload contains a 'facts' list, store each one.
+        Otherwise treat the whole payload as a single fact string.
         """
-        memory_payload["last_updated"] = datetime.utcnow().isoformat()
-        payload_bytes = json.dumps(memory_payload, ensure_ascii=False, indent=2).encode('utf-8')
+        facts = memory_payload.get('facts', [])
+        if not facts and isinstance(memory_payload, dict):
+            # Try to extract meaningful strings from the payload
+            for key in ['current_goal', 'known_topics', 'weak_points', 'in_progress_tasks']:
+                value = memory_payload.get(key)
+                if isinstance(value, str) and value:
+                    facts.append(f"Student {key.replace('_', ' ')}: {value}")
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str) and item:
+                            facts.append(f"Student {key.replace('_', ' ')}: {item}")
 
-        blob_id = None
-        walrus_response = None
-
-        # Gửi PUT request tới Walrus Publisher API
-        try:
-            url = f"{self.publisher_url}/v1/blobs?epochs={self.default_epochs}"
-            res = requests.put(
-                url,
-                data=payload_bytes,
-                headers={"Content-Type": "application/json"},
-                timeout=15
-            )
-            if res.status_code in [200, 201]:
-                data = res.json()
-                # Walrus format: data['newlyCreated']['blobObject']['blobId'] hoặc data['alreadyCertified']['blobId']
-                if 'newlyCreated' in data:
-                    blob_id = data['newlyCreated'].get('blobObject', {}).get('blobId')
-                elif 'alreadyCertified' in data:
-                    blob_id = data['alreadyCertified'].get('blobId')
-                walrus_response = data
-                logger.info(f"Successfully published memory to Walrus! Blob ID: {blob_id}")
-            else:
-                logger.warning(f"Walrus Publisher returned HTTP {res.status_code}: {res.text}")
-        except Exception as e:
-            logger.warning(f"Walrus Publisher connection failed (fallback to local): {e}")
-
-        # Đồng bộ cache cục bộ
-        cache_path = get_local_cache_path(user_id)
-        cache_data = {
+        result = self.remember_facts(user_id, facts)
+        return {
             "user_id": user_id,
-            "latest_blob_id": blob_id or f"mock-walrus-blob-{int(datetime.utcnow().timestamp())}",
-            "memory_data": memory_payload,
-            "synced_at": datetime.utcnow().isoformat(),
-            "walrus_raw": walrus_response
+            "namespace": f"studymate:{user_id}",
+            "remember_result": result,
         }
-        with open(cache_path, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
-        return cache_data
-
-    def fetch_blob(self, blob_id: str) -> dict:
-        """
-        Tải nội dung Blob từ Walrus Aggregator theo blob_id.
-        """
+    def _save_debug_cache(self, user_id: str, memories: list):
+        """Save latest recall result to local JSON for debugging only."""
         try:
-            url = f"{self.aggregator_url}/v1/blobs/{blob_id}"
-            res = requests.get(url, timeout=10)
-            if res.status_code == 200:
-                return res.json()
+            cache_path = get_local_cache_path(user_id)
+            cache_data = {
+                "user_id": user_id,
+                "namespace": f"studymate:{user_id}",
+                "cached_at": datetime.utcnow().isoformat(),
+                "debug_note": "This is a local debug cache only. Source of truth is MemWal.",
+                "memories": memories,
+            }
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"Failed to fetch blob {blob_id} from Walrus Aggregator: {e}")
-        return None
+            logger.warning(f"Failed to write debug cache for '{user_id}': {e}")

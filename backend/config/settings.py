@@ -115,12 +115,13 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# Walrus Protocol / MemWal Settings
-WALRUS_PUBLISHER_URL = os.getenv('WALRUS_PUBLISHER_URL', 'https://publisher.walrus-testnet.walrus.space')
-WALRUS_AGGREGATOR_URL = os.getenv('WALRUS_AGGREGATOR_URL', 'https://aggregator.walrus-testnet.walrus.space')
-WALRUS_DEFAULT_EPOCHS = int(os.getenv('WALRUS_DEFAULT_EPOCHS', '5'))
+# MemWal SDK Settings (Walrus Memory)
+MEMWAL_PRIVATE_KEY = os.getenv('MEMWAL_PRIVATE_KEY', '')
+MEMWAL_ACCOUNT_ID = os.getenv('MEMWAL_ACCOUNT_ID', '')
+MEMWAL_ENV = os.getenv('MEMWAL_ENV', 'prod')
 
 # LLM / Open Source Model Config (e.g. Ollama, vLLM, or OpenRouter)
 LLM_API_BASE = os.getenv('LLM_API_BASE', 'http://localhost:11434/v1')
 LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME', 'llama3')
 LLM_API_KEY = os.getenv('LLM_API_KEY', 'ollama')
+

@@ -4,12 +4,12 @@ import { Bot, User, Database, Undo2, AlertCircle, Trash2, X } from 'lucide-react
 export default function ChatWindow({
   messages,
   isLoading,
-  onRecallMessage,
+  onUnsendMessage,
   onDeleteMessage,
   onClearHistory,
 }) {
   const scrollRef = useRef(null);
-  const [targetRecallMsg, setTargetRecallMsg] = useState(null);
+  const [targetUnsendMsg, setTargetUnsendMsg] = useState(null);
   const [targetDeleteMsg, setTargetDeleteMsg] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -23,7 +23,7 @@ export default function ChatWindow({
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setTargetRecallMsg(null);
+        setTargetUnsendMsg(null);
         setTargetDeleteMsg(null);
         setShowClearConfirm(false);
       }
@@ -32,11 +32,11 @@ export default function ChatWindow({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const confirmRecall = () => {
-    if (targetRecallMsg && onRecallMessage) {
-      onRecallMessage(targetRecallMsg.id);
+  const confirmUnsend = () => {
+    if (targetUnsendMsg && onUnsendMessage) {
+      onUnsendMessage(targetUnsendMsg.id);
     }
-    setTargetRecallMsg(null);
+    setTargetUnsendMsg(null);
   };
 
   const confirmDelete = () => {
@@ -87,7 +87,7 @@ export default function ChatWindow({
               Chào mừng bạn đến với StudyMate Bot!
             </h3>
             <p className="text-sm text-slate-400 max-w-md">
-              Tất cả tiến độ học tập, bài tập đang làm dở và ghi chú đều được lưu trữ an toàn trên Walrus Memory. Bạn có thể gửi câu hỏi, thu hồi hoặc xóa tin nhắn bất kỳ lúc nào!
+              Tất cả tiến độ học tập, bài tập đang làm dở và ghi chú đều được lưu trữ an toàn trên Walrus Memory. Bạn có thể gửi câu hỏi, rút lại hoặc xóa tin nhắn bất kỳ lúc nào!
             </p>
           </div>
         ) : (
@@ -140,7 +140,7 @@ export default function ChatWindow({
                     {isRecalled ? (
                       <div className="flex items-center gap-2 text-sm italic text-slate-400 py-0.5">
                         <Undo2 className="w-4 h-4 text-slate-500 shrink-0" />
-                        <span>Tin nhắn đã được thu hồi</span>
+                        <span>Tin nhắn đã được rút lại</span>
                       </div>
                     ) : (
                       <div className="text-sm whitespace-pre-wrap leading-relaxed">
@@ -152,7 +152,7 @@ export default function ChatWindow({
                     <div className="mt-2 flex items-center justify-end gap-2">
                       {isRecalled && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700/50">
-                          Đã thu hồi
+                          Đã rút lại
                         </span>
                       )}
                       <span
@@ -179,13 +179,13 @@ export default function ChatWindow({
                     <div
                       className="opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-1 shrink-0 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-lg"
                     >
-                      {/* Nút Thu hồi (nếu chưa thu hồi) */}
+                      {/* Nút Rút lại (Unsend) */}
                       {!isRecalled && (
                         <button
-                          onClick={() => setTargetRecallMsg(msg)}
+                          onClick={() => setTargetUnsendMsg(msg)}
                           className="p-1 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition-colors"
-                          title="Thu hồi tin nhắn (rút lại nội dung)"
-                          aria-label="Thu hồi tin nhắn"
+                          title="Rút lại tin nhắn (Unsend)"
+                          aria-label="Rút lại tin nhắn"
                         >
                           <Undo2 className="w-3.5 h-3.5" />
                         </button>
@@ -231,11 +231,11 @@ export default function ChatWindow({
         )}
       </div>
 
-      {/* Confirmation Modal for Message Recall (Fixed at screen center) */}
-      {targetRecallMsg && (
+      {/* Confirmation Modal for Unsend Message (Fixed at screen center) */}
+      {targetUnsendMsg && (
         <div
           onClick={(e) => {
-            if (e.target === e.currentTarget) setTargetRecallMsg(null);
+            if (e.target === e.currentTarget) setTargetUnsendMsg(null);
           }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
         >
@@ -245,31 +245,31 @@ export default function ChatWindow({
                 <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <Undo2 className="w-4 h-4" />
                 </div>
-                <h3 className="font-semibold text-slate-100 text-sm">Thu hồi tin nhắn</h3>
+                <h3 className="font-semibold text-slate-100 text-sm">Rút lại tin nhắn (Unsend)</h3>
               </div>
               <button
-                onClick={() => setTargetRecallMsg(null)}
+                onClick={() => setTargetUnsendMsg(null)}
                 className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-slate-300 my-4 leading-relaxed">
-              Bạn có chắc chắn muốn <span className="text-amber-300 font-semibold">thu hồi tin nhắn này</span> không?
-              Tin nhắn sẽ được rút lại, hiển thị thành trạng thái <i>"Tin nhắn đã được thu hồi"</i> và không còn được bot dùng làm ngữ cảnh học tập.
+              Bạn có chắc chắn muốn <span className="text-amber-300 font-semibold">rút lại tin nhắn này</span> không?
+              Tin nhắn sẽ được rút lại, hiển thị thành trạng thái <i>"Tin nhắn đã được rút lại"</i> và không còn được bot dùng làm ngữ cảnh học tập.
             </p>
             <div className="flex justify-end gap-2.5 pt-2">
               <button
-                onClick={() => setTargetRecallMsg(null)}
+                onClick={() => setTargetUnsendMsg(null)}
                 className="px-4 py-2 text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors border border-slate-700"
               >
                 Hủy
               </button>
               <button
-                onClick={confirmRecall}
+                onClick={confirmUnsend}
                 className="px-4 py-2 text-xs rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium shadow-md transition-all cursor-pointer"
               >
-                Xác nhận thu hồi
+                Xác nhận rút lại
               </button>
             </div>
           </div>
